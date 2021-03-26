@@ -1,4 +1,3 @@
-import { AnyARecord } from "dns";
 import { 
     Application,
     Request,
@@ -6,17 +5,12 @@ import {
 } from "express";
 
 const express = require("express");
-
+const routes = require("./routes");
 const app:Application = express();
-
 const PORT:number = 3333;
 
+app.use(express.json());
+app.use(routes);
 app.listen(PORT, () => {
-    `SERVER RUNNING ON PORT ${PORT}\n`;
+    console.log(`SERVER RUNNING ON PORT ${PORT}\n`);
 });
-
-app.get('/', (req:Request,res:Response) => {
-    res
-        .status(200)   
-        .send({"message": "Hello World"});
-})
