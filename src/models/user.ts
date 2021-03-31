@@ -6,7 +6,7 @@ const model = mongoose.model;
 const user = new Schema({
     firstName: {
         type: String,
-        required: true
+        required: true,
     },
     lastName: {
         type: String,
@@ -14,25 +14,29 @@ const user = new Schema({
     },
     phone: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     email: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     password: {
         type: String,
         required: true
     },
-    tosAgremment: {
+    tosAgreement: {
         type: Boolean,
-        default: false
+        required: true
     },
     createdAt: {
         type: Date,
         default: Date.now
     },
 });
+
+user.plugin(require('mongoose-beautiful-unique-validation'));
 
 const userModel = model("user", user);
 
