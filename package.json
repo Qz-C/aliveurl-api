@@ -19,6 +19,8 @@
     "bcrypt": "^5.0.1",
     "express": "^4.17.1",
     "mongoose": "^5.12.2",
-    "mongoose-beautiful-unique-validation": "^7.1.1"
+    "mongoose-beautiful-unique-validation": "^7.1.1",
+    "mongoose-paginate": "^5.0.3",
+    "utf8": "^3.0.0"
   }
 }
