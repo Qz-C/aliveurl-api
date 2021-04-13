@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { hash } from "../helpers/security"
-import { phoneChecker, emailChecker, isObjEmpty } from "../helpers/validations";
+import { phoneChecker, emailChecker, isObjEmpty, idChecker } from "../helpers/validations";
 import { User } from "../types";
 import userModel from "../models/user";
 const unexpectedError = { "Error": "An unexpected error has occurred. Please try the operation again, if it persists contact us." }
@@ -16,27 +16,27 @@ module.exports = {
             "password" in req.body &&
             "tosAgreement" in req.body
         ) {
-            const user: User = req.body;
+            const { body } = req;
 
-            if (user.firstName === "" || user.lastName === "")
+            if (body.firstName === "" || body.lastName === "")
                 return res.status(400).send({ "Error": "firstName and lastName fields cannot be blank" });
 
-            if (!user.tosAgreement)
+            if (!body.tosAgreement)
                 return res.status(400).send({ "Error": "User must agree with the Terms of Service Agreement" });
 
-            if (!phoneChecker(user.phone))
+            if (!phoneChecker(body.phone))
                 return res.status(400).send({ "Error": "Invalid Internacional phone number" });
 
-            if (!emailChecker(user.email))
+            if (!emailChecker(body.email))
                 return res.status(400).send({ "Error": "Invalid email" })
 
-            user.firstName = user.firstName.toLowerCase();
-            user.lastName = user.lastName.toLowerCase();
-            user.email = user.email.toLowerCase();
-            user.password = await hash(user.password as string);
+            body.firstName = body.firstName.toLowerCase();
+            body.lastName = body.lastName.toLowerCase();
+            body.email = body.email.toLowerCase();
+            body.password = await hash(body.password as string);
 
             try {
-                const document = new userModel(user);
+                const document = new userModel(body);
                 const userSaved: User = await document.save();
                 userSaved.password = undefined;
                 res.status(201).send(userSaved);
@@ -52,21 +52,23 @@ module.exports = {
     async getOne(req: Request, res: Response) {
         const { query } = req;
         if ("_id" in query) {
+
+            if (!idChecker(query._id as string))
+                res.status(400).send({ "Error": "Invalid ID" });
+
             userModel.findById(query._id, (error: any, user: User) => {
 
-                if (error && error.path === "_id") {
-                    console.error(error);
-                    return res.status(404).send({ "Error": "Invalid ID" });
-                } else if(error) {
+                if (error) {
                     console.error(error);
                     return res.status(500).send(unexpectedError);
                 }
-                if (user){
-                    res.status(200).send(user);
+
+                if (user) {
                     user.password = undefined;
+                    return res.status(200).send(user);
                 }
                 else
-                    res.status(404).send({ "Message": "User not found" });
+                    return res.status(404).send({ "Message": "User not found" });
             })
         }
         else
@@ -118,15 +120,16 @@ module.exports = {
         const { query } = req;
         if ("_id" in query) {
 
+            if (!idChecker(query._id as string))
+                res.status(400).send({ "Error": "Invalid ID" });
+
             userModel.deleteOne({ "_id": query._id }, (error: any, result: any) => {
-                if (error && error.path === "_id") {
-                    console.error(error);
-                    return res.status(404).send({ "Error": "Invalid ID" });
-                } else if(error){
+
+                if (error) {
                     console.error(error);
                     return res.status(500).send(unexpectedError);
                 }
-                if (result.ok === 1 && result.deletedCount === 1)  
+                if (result.ok === 1 && result.deletedCount === 1)
                     res.status(200).send({ "Message": "Successful deleted " })
 
                 else
@@ -172,9 +175,8 @@ module.exports = {
     async updateOne(req: Request, res: Response) {
         if (!isObjEmpty(req.body) && !isObjEmpty(req.query)) {
             const { body, query } = req;
-            
             const filter: any = {};
-            
+
             if ("_id" in query) {
                 filter._id = query._id;
             } else
@@ -189,7 +191,7 @@ module.exports = {
                             return res.status(400).send({ "Error": "Invalid Internacional phone number" });
                         filter.phone = phone;
                     } else {
-                        res.status(400).send({ "Error": "Invalid query params" });
+                        res.status(400).send({ "Error": "Missing query params" });
                     }
 
             const update: any = {};
@@ -215,12 +217,19 @@ module.exports = {
 
             update.updatedAt = new Date;
 
-            userModel.findOneAndUpdate(filter, update, {new: true,
-                upsert: true, rawResult: true }, (error:any, updated:any ) => {
-                if(updated){
+            userModel.findOneAndUpdate(filter, update, {
+                new: true,
+                upsert: true, 
+                rawResult: true
+            }, (error: any, updated: any) => {
+                if (error) {
+                    console.error(error);
+                    res.status(500).send(unexpectedError);
+                }
+                if (updated) {
                     res.status(200).send(updated.value);
-                }else{
-                    res.status(400).send("Error");
+                } else {
+                    res.status(404).send({ "Error": "User not found" });
                 }
             })
         } else

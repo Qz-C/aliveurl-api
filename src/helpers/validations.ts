@@ -11,3 +11,8 @@ export const emailChecker = (email:string):boolean => {
 export const isObjEmpty = (obj:any):boolean => {
     return Object.keys(obj).length === 0;
 }
+
+export const idChecker = (id:string): boolean => {
+    const regex = /^[a-f\d]{24}$/i;
+    return regex.test(id);
+}
