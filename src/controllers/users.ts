@@ -1,22 +1,23 @@
 import { Request, Response } from "express";
-import { hash } from "../helpers/security"
+import { hash, genarateToken } from "../helpers/security";
 import { phoneChecker, emailChecker, isObjEmpty, idChecker } from "../helpers/validations";
-import { User } from "../types";
+import { User } from "../types/types";
 import userModel from "../models/user";
 const unexpectedError = { "Error": "An unexpected error has occurred. Please try the operation again, if it persists contact us." }
 
 module.exports = {
     async create(req: Request, res: Response) {
 
+        const { body } = req;
+
         if (
-            "firstName" in req.body &&
-            "lastName" in req.body &&
-            "phone" in req.body &&
-            "email" in req.body &&
-            "password" in req.body &&
-            "tosAgreement" in req.body
+            "firstName" in body &&
+            "lastName" in body &&
+            "phone" in body &&
+            "email" in body &&
+            "password" in body &&
+            "tosAgreement" in body
         ) {
-            const { body } = req;
 
             if (body.firstName === "" || body.lastName === "")
                 return res.status(400).send({ "Error": "firstName and lastName fields cannot be blank" });
@@ -38,8 +39,14 @@ module.exports = {
             try {
                 const document = new userModel(body);
                 const userSaved: User = await document.save();
+
+                const token = genarateToken({ email: userSaved.email }, 1000 * 60 * 60 * 24 * 30);
                 userSaved.password = undefined;
-                res.status(201).send(userSaved);
+
+                res
+                    .cookie("jwt", token, { secure: true, httpOnly: true })
+                    .status(201)
+                    .send(userSaved);
 
             } catch (err) {
                 return res.status(400).send({ "Error": "Duplicated field", "details": err.errors });
@@ -219,7 +226,7 @@ module.exports = {
 
             userModel.findOneAndUpdate(filter, update, {
                 new: true,
-                upsert: true, 
+                upsert: true,
                 rawResult: true
             }, (error: any, updated: any) => {
                 if (error) {
